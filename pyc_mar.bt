@@ -54,7 +54,7 @@ typedef struct {
 } ObjType <read=ObjTypeR>;
 
 string ObjTypeR(ObjType &type) {
-	local ObjType etype = type.type;
+	local ObjTypeE etype = type.type;
 	if (type.ref) {
 		return EnumToString(etype);
 	} else {
