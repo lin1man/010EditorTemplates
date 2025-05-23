@@ -1,0 +1,234 @@
+//------------------------------------------------
+//
+//      File: pyc_mar.bt
+//   Authors: walter
+//   Version: 1.0
+//   Purpose: Parse python bytecode
+//  Category: Programming
+// File Mask: *
+//  ID Bytes:
+//   History:
+//   1.0   Initial release.
+//------------------------------------------------
+LittleEndian();
+
+const int pycversion = 311;
+
+enum <char> ObjTypeE {
+	TYPE_NULL = '0',                    // Python 1.0 ->
+	TYPE_NONE = 'N',                    // Python 1.0 ->
+	TYPE_FALSE = 'F',                   // Python 2.3 ->
+	TYPE_TRUE = 'T',                    // Python 2.3 ->
+	TYPE_STOPITER = 'S',                // Python 2.2 ->
+	TYPE_ELLIPSIS = '.',                // Python 1.4 ->
+	TYPE_INT = 'i',                     // Python 1.0 ->
+	TYPE_INT64 = 'I',                   // Python 1.5 - 3.3
+	TYPE_FLOAT = 'f',                   // Python 1.0 ->
+	TYPE_BINARY_FLOAT = 'g',            // Python 2.5 ->
+	TYPE_COMPLEX = 'x',                 // Python 1.4 ->
+	TYPE_BINARY_COMPLEX = 'y',          // Python 2.5 ->
+	TYPE_LONG = 'l',                    // Python 1.0 ->
+	TYPE_STRING = 's',                  // Python 1.0 ->
+	TYPE_INTERNED = 't',                // Python 2.4 - 2.7, 3.4 ->
+	TYPE_STRINGREF = 'R',               // Python 2.4 - 2.7
+	TYPE_OBREF = 'r',                   // Python 3.4 ->
+	TYPE_TUPLE = '(',                   // Python 1.0 ->
+	TYPE_LIST = '[',                    // Python 1.0 ->
+	TYPE_DICT = '{',                    // Python 1.0 ->
+	TYPE_CODE = 'c',                    // Python 1.3 ->
+	TYPE_CODE2 = 'C',                   // Python 1.0 - 1.2
+	TYPE_UNICODE = 'u',                 // Python 1.6 ->
+	TYPE_UNKNOWN = '?',                 // Python 1.0 ->
+	TYPE_SET = '<',                     // Python 2.5 ->
+	TYPE_FROZENSET = '>',               // Python 2.5 ->
+	TYPE_ASCII = 'a',                   // Python 3.4 ->
+	TYPE_ASCII_INTERNED = 'A',          // Python 3.4 ->
+	TYPE_SMALL_TUPLE = ')',             // Python 3.4 ->
+	TYPE_SHORT_ASCII = 'z',             // Python 3.4 ->
+	TYPE_SHORT_ASCII_INTERNED = 'Z',    // Python 3.4 ->
+};
+
+typedef struct {
+	char type:7;
+	char ref:1;
+} ObjType <read=ObjTypeR>;
+
+string ObjTypeR(ObjType &type) {
+	local ObjType etype = type.type;
+	if (type.ref) {
+		return EnumToString(etype);
+	} else {
+		return "Ref " + EnumToString(etype);
+	}
+}
+
+typedef struct r_object {
+	ObjType type;
+	switch (type.type) {
+		case TYPE_OBREF:
+			int32 index;
+			break;
+		case TYPE_NULL:
+		case TYPE_NONE:
+		case TYPE_STOPITER:
+		case TYPE_ELLIPSIS:
+		case TYPE_FALSE:
+		case TYPE_TRUE:
+			break;
+		case TYPE_INT:
+			int32 value;
+			break;
+		case TYPE_INT64:
+			int64 value;
+			break;
+		case TYPE_LONG:
+			int32 n;
+			local int size = n<0?-n:n;
+			int16 digit[size];
+			break;
+		case TYPE_FLOAT:
+			uchar n;
+			char value[n];
+			break;
+		case TYPE_BINARY_FLOAT:
+			double value;
+			break;
+
+		case TYPE_COMPLEX:
+			uchar n;
+			char m_image[n];
+			break;
+
+		case TYPE_BINARY_COMPLEX:
+			int64 m_imag;
+			break;
+
+			int16 n;
+			if (n)
+				char str[n];
+			break;
+		case TYPE_INTERNED:
+		case TYPE_STRING:
+		case TYPE_UNICODE:
+		case TYPE_ASCII:
+		case TYPE_ASCII_INTERNED:
+		case TYPE_SHORT_ASCII_INTERNED:
+		case TYPE_SHORT_ASCII:
+			local int n = 0;
+			if (type.type == TYPE_SHORT_ASCII || type.type == TYPE_SHORT_ASCII_INTERNED) {
+				uchar length;
+				n = length;
+			} else {
+				int32 length;
+				n = length;
+			}
+			if (n && (FTell() + n <= FileSize()))
+				char str[n];
+			break;
+		case TYPE_STRINGREF:
+			int32 n;
+			break;
+		case TYPE_SMALL_TUPLE:
+		case TYPE_TUPLE:
+			local int n = 0;
+			if (type.type == TYPE_SMALL_TUPLE) {
+				uchar m_size;
+				n = m_size;
+			} else {
+				int32 m_size;
+				n = m_size;
+			}
+			if (n)
+				struct r_object elements[n] <optimize=false>;
+			break;
+		case TYPE_LIST:
+			int32 n;
+			if (n)
+				struct r_object elements[n] <optimize=false>;
+			break;
+		case TYPE_DICT:
+			while (1) {
+				struct r_object key;
+				if (key.type == TYPE_NULL)
+					break;
+				struct r_object val;
+			}
+			break;
+		case TYPE_SET:
+		case TYPE_FROZENSET:
+			int32 n;
+			if (n)
+				struct r_object elements[n] <optimize=false>;
+			break;
+		case TYPE_CODE2:
+		case TYPE_CODE:
+			if (pycversion >= 103 && pycversion <= 203) {
+				int16 m_argCount;
+			} else if (pycversion >= 203) {
+				int32 m_argCount;
+			}
+			if (pycversion >= 308) {
+				int32 m_posOnlyArgCount;
+			}
+			if (pycversion >= 300) {
+				int32 m_kwOnlyArgCount;
+			}
+			if (pycversion >= 103 && pycversion < 203) {
+				int16 m_numLocals;
+			} else if (pycversion >=203 && pycversion < 311) {
+				int32 m_numLocals;
+			}
+			if (pycversion >= 105 && pycversion < 203) {
+				int16 m_stackSize;
+			} else if (pycversion >= 203) {
+				int32 m_stackSize;
+			}
+			if (pycversion >= 103 && pycversion< 203) {
+				int16 m_flags;
+			} else if (pycversion >= 203) {
+				int32 m_flags;
+			}
+			if (pycversion <= 308) {
+				m_flags = (m_flags & 0xffff) | ((m_flags & 0xFFF0000) << 4);
+			}
+			struct r_object m_code;
+			struct r_object m_consts;
+			struct r_object m_names;
+			if (pycversion >= 103) {
+				struct r_object m_localNames;
+			}
+			if (pycversion >= 311) {
+				struct r_object m_localKinds;
+			}
+			if (pycversion >= 201 && pycversion < 311) {
+				struct r_object m_freeVars;
+			}
+			if (pycversion >= 201 && pycversion < 311) {
+				struct r_object m_cellVars;
+			}
+			struct r_object m_fileName;
+			struct r_object m_name;
+			if (pycversion >= 311) {
+				struct r_object m_qualName;
+			}
+			if (pycversion >= 105 && pycversion < 203) {
+				int16 m_firstLine;
+			} else if (pycversion >= 203) {
+				int32 m_firstLine;
+			}
+			if (pycversion >= 105) {
+				struct r_object m_lnTable;
+			}
+			if (pycversion >= 311) {
+				struct r_object m_exceptTable;
+			}
+			break;
+		default:
+			Warning("unknown type code: %c %d", type.type, type.type);
+			Exit(1);
+	}
+} r_object;
+
+struct {
+	r_object object;
+} file;
